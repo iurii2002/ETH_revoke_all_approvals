@@ -16,7 +16,7 @@ def get_latest_block_number():
     # Gets the latest block number of the Ethereum blockchain
     # Returns string of the latest block number
     current_time = int(datetime.datetime.now().timestamp())
-    get_latest_block_URL = f'https://api.etherscan.io/api?module=block&action=getblocknobytime&timestamp={current_time}&' \
+    get_latest_block_URL = f'{ENDPOINT}api?module=block&action=getblocknobytime&timestamp={current_time}&' \
                            f'closest=before&apikey={ETHERSCAN_API_KEY}'
     latest_block_details = requests.get(get_latest_block_URL)
     latest_block_number = latest_block_details.json()['result']
@@ -85,7 +85,7 @@ def create_allowance(approved_address, amount):
     return {approved_address: amount}
 
 
-def get_allowances(list_of_transactions):
+def paste_allowances_in_dictionary(list_of_transactions):
     allowances = {}
     for tx in list_of_transactions:
         method, approved_address, amount = parse_tx_input(tx)
@@ -97,10 +97,25 @@ def get_allowances(list_of_transactions):
     print_allowances(allowances)
 
 
+def check_allowance_from_token_contract(owner, contract_address, spender):
+    contract = w3.eth.contract(address=contract_address, abi=get_contract_abi(contract_address))
+    allowance = contract.functions.allowance(Web3.toChecksumAddress(owner), Web3.toChecksumAddress(spender)).call()
+    return allowance
+    # return contract.all_functions()
+
+def get_contract_abi(contract_address):
+    get_contract_abi_URL = f'{ENDPOINT}api?module=contract&action=getabi&address={contract_address}&' \
+                           f'apikey={ETHERSCAN_API_KEY}'
+    contract_abi = requests.get(get_contract_abi_URL).json()['result']
+    return contract_abi
+
+
 def print_allowances(allowances):
     for (contract, allowance) in allowances.items():
         print(contract, allowance)
 
 
 if __name__ == "__main__":
-    get_allowances(filter_all_token_approve_transaction(get_all_out_transactions(address)))
+    # get_allowances(filter_all_token_approve_transaction(get_all_out_transactions(address)))
+    # print_transactions(filter_all_token_approve_transaction(get_all_out_transactions(address)))
+    print(check_allowance_from_token_contract(address, '0x4d224452801ACEd8B2F0aebE155379bb5D594381', '0x34d85c9cdeb23fa97cb08333b511ac86e1c4e258'))
