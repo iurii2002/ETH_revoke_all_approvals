@@ -5,7 +5,6 @@ from sensitive_data import ETHERSCAN_API_KEY, WEB3_PROVIDER
 
 ENDPOINT = 'https://api.etherscan.io/'
 
-contracts = []
 address = '0xd2C2e84501C63b7B9897Df063288D67060119C99'
 w3 = Web3(Web3.HTTPProvider(WEB3_PROVIDER))
 
@@ -67,6 +66,13 @@ def get_destination_tx(tx):
     return tx['to']
 
 
+def create_a_list_of_approved_contracts(list_of_approve_transactions):
+    contracts = []
+    for transaction in list_of_approve_transactions:
+        contracts.append(get_destination_tx(transaction))
+    return contracts
+
+
 def parse_tx_input(tx):
     # Gets main data from tx input
     # Input: ethereum transaction
@@ -85,9 +91,9 @@ def create_allowance(approved_address, amount):
     return {approved_address: amount}
 
 
-def paste_allowances_in_dictionary(list_of_transactions):
+def paste_allowances_in_dictionary(list_of_approve_transactions):
     allowances = {}
-    for tx in list_of_transactions:
+    for tx in list_of_approve_transactions:
         method, approved_address, amount = parse_tx_input(tx)
         token_contract = get_destination_tx(tx)
         if token_contract not in allowances:
@@ -98,15 +104,15 @@ def paste_allowances_in_dictionary(list_of_transactions):
 
 
 def check_allowance_from_token_contract(owner, contract_address, spender):
-    contract = w3.eth.contract(address=contract_address, abi=get_contract_abi(contract_address))
+    contract = w3.eth.contract(address=contract_address, abi=_get_contract_abi(contract_address))
     allowance = contract.functions.allowance(Web3.toChecksumAddress(owner), Web3.toChecksumAddress(spender)).call()
     return allowance
-    # return contract.all_functions()
 
-def get_contract_abi(contract_address):
-    get_contract_abi_URL = f'{ENDPOINT}api?module=contract&action=getabi&address={contract_address}&' \
+
+def _get_contract_abi(contract_address):
+    get_contract_abi_url = f'{ENDPOINT}api?module=contract&action=getabi&address={contract_address}&' \
                            f'apikey={ETHERSCAN_API_KEY}'
-    contract_abi = requests.get(get_contract_abi_URL).json()['result']
+    contract_abi = requests.get(get_contract_abi_url).json()['result']
     return contract_abi
 
 
@@ -118,4 +124,5 @@ def print_allowances(allowances):
 if __name__ == "__main__":
     # get_allowances(filter_all_token_approve_transaction(get_all_out_transactions(address)))
     # print_transactions(filter_all_token_approve_transaction(get_all_out_transactions(address)))
-    print(check_allowance_from_token_contract(address, '0x4d224452801ACEd8B2F0aebE155379bb5D594381', '0x34d85c9cdeb23fa97cb08333b511ac86e1c4e258'))
+    # print(check_allowance_from_token_contract(address, '0x4d224452801ACEd8B2F0aebE155379bb5D594381', '0x34d85c9cdeb23fa97cb08333b511ac86e1c4e258'))
+    print(create_a_list_of_approved_contracts(filter_all_token_approve_transaction(get_all_out_transactions(address))))
