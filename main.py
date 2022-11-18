@@ -66,14 +66,17 @@ def get_destination_tx(tx):
     return tx['to']
 
 
-def create_a_list_of_approved_contracts(list_of_approve_transactions):
-    contracts = []
-    for transaction in list_of_approve_transactions:
-        contracts.append(get_destination_tx(transaction))
-    return contracts
+def _get_contract_abi(contract_address):
+    # Returns contract ABI using Etherscan API
+    # Input: contract address
+    # Returns: Contract ABI
+    get_contract_abi_url = f'{ENDPOINT}api?module=contract&action=getabi&address={contract_address}&' \
+                           f'apikey={ETHERSCAN_API_KEY}'
+    contract_abi = requests.get(get_contract_abi_url).json()['result']
+    return contract_abi
 
 
-def parse_tx_input(tx):
+def parse_approval_tx_input_data(tx):
     # Gets main data from tx input
     # Input: ethereum transaction
     # Returns: (tx method, tx approval address, approved amount)
@@ -91,16 +94,28 @@ def create_allowance(approved_address, amount):
     return {approved_address: amount}
 
 
+def update_allowances_from_contract(allowances):
+    for (contract, allowance) in allowances.items():
+        for (spender, amount) in allowance.items():
+            current_allowance = check_allowance_from_token_contract(address, contract, spender)
+            if current_allowance != amount:
+                _update_allowance_amount(allowances, current_allowance)
+
+
+def _update_allowance_amount():
+    pass
+
+
+
 def paste_allowances_in_dictionary(list_of_approve_transactions):
     allowances = {}
     for tx in list_of_approve_transactions:
-        method, approved_address, amount = parse_tx_input(tx)
+        method, approved_address, amount = parse_approval_tx_input_data(tx)
         token_contract = get_destination_tx(tx)
         if token_contract not in allowances:
             allowances[token_contract] = create_allowance(approved_address, amount)
-        else:
-            allowances[token_contract][approved_address] = amount
-    print_allowances(allowances)
+    update_allowances_from_contract(allowances)
+    return allowances
 
 
 def check_allowance_from_token_contract(owner, contract_address, spender):
@@ -109,20 +124,10 @@ def check_allowance_from_token_contract(owner, contract_address, spender):
     return allowance
 
 
-def _get_contract_abi(contract_address):
-    get_contract_abi_url = f'{ENDPOINT}api?module=contract&action=getabi&address={contract_address}&' \
-                           f'apikey={ETHERSCAN_API_KEY}'
-    contract_abi = requests.get(get_contract_abi_url).json()['result']
-    return contract_abi
-
-
 def print_allowances(allowances):
     for (contract, allowance) in allowances.items():
         print(contract, allowance)
 
 
 if __name__ == "__main__":
-    # get_allowances(filter_all_token_approve_transaction(get_all_out_transactions(address)))
-    # print_transactions(filter_all_token_approve_transaction(get_all_out_transactions(address)))
-    # print(check_allowance_from_token_contract(address, '0x4d224452801ACEd8B2F0aebE155379bb5D594381', '0x34d85c9cdeb23fa97cb08333b511ac86e1c4e258'))
-    print(create_a_list_of_approved_contracts(filter_all_token_approve_transaction(get_all_out_transactions(address))))
+    print_allowances(paste_allowances_in_dictionary(filter_all_token_approve_transaction(get_all_out_transactions(address))))
