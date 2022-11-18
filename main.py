@@ -99,12 +99,10 @@ def update_allowances_from_contract(allowances):
         for (spender, amount) in allowance.items():
             current_allowance = check_allowance_from_token_contract(address, contract, spender)
             if current_allowance != amount:
-                _update_allowance_amount(allowances, current_allowance)
-
-
-def _update_allowance_amount():
-    pass
-
+                allowances[contract][spender] = current_allowance
+            if current_allowance > 1e+58:
+                allowances[contract][spender] = "unlimited"
+    return allowances
 
 
 def paste_allowances_in_dictionary(list_of_approve_transactions):
@@ -114,13 +112,14 @@ def paste_allowances_in_dictionary(list_of_approve_transactions):
         token_contract = get_destination_tx(tx)
         if token_contract not in allowances:
             allowances[token_contract] = create_allowance(approved_address, amount)
-    update_allowances_from_contract(allowances)
+    allowances = update_allowances_from_contract(allowances)
     return allowances
 
 
 def check_allowance_from_token_contract(owner, contract_address, spender):
-    contract = w3.eth.contract(address=contract_address, abi=_get_contract_abi(contract_address))
+    contract = w3.eth.contract(address=Web3.toChecksumAddress(contract_address), abi=_get_contract_abi(contract_address))
     allowance = contract.functions.allowance(Web3.toChecksumAddress(owner), Web3.toChecksumAddress(spender)).call()
+    allowance = allowance / (10 ** contract.functions.decimals().call())
     return allowance
 
 
